@@ -3,7 +3,7 @@ https://ellennewellevans.github.io/liri-node-app/
 
 Screenshots are located in repo https://github.com/ellennewellevans/liri-node-app/screenshots
 
-This app lets you search Spotify for songs, Bands in Town for concerts, and OMBD for movies.
+This app lets you search Spotify for songs, Bands in Town for concerts, and OMBD for movies!
 
 <h2>Directions</h2>
 Use node to run this program. Use "node liri.js" then run one of the following comands, then add search text:
