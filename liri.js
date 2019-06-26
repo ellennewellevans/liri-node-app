@@ -1,100 +1,97 @@
-const Spotify = require("node-spotify-api");
+// Set up the config because that's how this whole thing works
 require("dotenv").config();
-const keys = require("./keys.js");
-const spotify = new Spotify(keys.spotify);
-const fs = require("fs");
-const axios = require("axios");
-const moment = require("moment");
 
+// var what?! consts are where it's at
+const axios = require("axios");
+const fs = require("fs");
+const keys = require("./keys.js");
+const moment = require("moment");
+const Spotify = require("node-spotify-api");
+
+const spotify = new Spotify(keys.spotify);
+
+// ok, let's set up the inputs by the user
 const command = process.argv[2];
 const input = process.argv.slice(3).join("+");
 
+// let's process the input from the user
 const processCommand = function (command, input) {
     switch (command) {
+    //if command is "concert-this"
         case "concert-this":
+            //magic word
             axios
+                //search for the band (input) events at bandsintown
                 .get(
                     "https://rest.bandsintown.com/artists/" +
                     input +
                     "/events?app_id=codingbootcamp"
                 )
+                //  pull back the response from bandsintown
                 .then(function (response) {
+                    // build an array of the data
                     const eventArray = response.data;
-                    eventArray.forEach(function (response) {
+                    eventArray.forEach(function(response) {
+                        //use moment to format the date
                         const formattedDate = moment(response.datetime).format(
                             "MM/DD/YYYY"
                         );
+                        //console log the info (yay template literals!)
                         console.log(`${response.venue.name}
                         ${response.venue.city}, ${response.venue.region}
                         ${formattedDate}
-                        ==============================================`);
-                        fs.appendFile("./log.txt",`${response.venue.name}
-                        ${response.venue.city}, 
-                        ${response.venue.region}
-                        ${formattedDate}
-                        ==============================================`,
+                        __________________________________________________`);
+                            //and the great "what if there's no response"
                             err => {
                                 if (err) console.log(`Could not log due to ${err.message}`);
                             }
-                        );
                     });
                 });
             break;
+    //if command is "spotify-this-song"           
         case "spotify-this-song":
             if (input === "") {
+                //Setting up Ace of Base as the Default
                 input = "The Sign Ace of Base";
             }
+            //setting up search for spotify and limiting to 1 result
             spotify.search({
                     type: "track",
                     query: `'${input}'`,
                     limit: 1
                 },
+                //"what if"
                 function (err, data) {
                     if (err) {
                         return console.log("Error occurred: " + err);
                     }
+                    //log artist info
                     console.log(`Artist: ${data.tracks.items[0].album.artists[0].name}
                                 Song: ${data.tracks.items[0].name}`);
-                                fs.appendFile("./log.txt",`
-                                Artist: ${data.tracks.items[0].album.artists[0].name}
-                                Song: ${data.tracks.items[0].name}`,
-                        err => {
-                            if (err) console.log(`Could not log due to ${err.message}`);
-                        }
-                    );
+                    //log preview url
                     const previewURL = data.tracks.items[0].preview_url;
                     console.log(
                         previewURL === null ?
                         "Preview not available for this song" :
-                        `Preview: ${previewURL}`
-                    );
-                    fs.appendFile(
-                        "./log.txt",
-                        previewURL === null ?
-                        "\nPreview not available for this song" :
-                        `
-                    Preview: ${previewURL}`,
-                        err => {
-                            if (err) console.log(`Could not log due to ${err.message}`);
-                        }
-                    );
+                        `Preview: ${previewURL}`);
+                    //log album
                     console.log(`Album: ${data.tracks.items[0].album.name}`);
-                    fs.appendFile("./log.txt", `
-                Album: ${data.tracks.items[0].album.name}`,
-                        (err) => {
-                            if (err) console.log(`Could not log due to ${err.message}`);
-                        })
                 }
             );
             break;
+    //if command is "movie-this"
         case "movie-this":
             if (input === "") {
+                //set default to Mr. Nobody
                 input = "Mr Nobody";
             }
+            //Magic words
             axios
+                //query OMDB with my API key
                 .get(
                     "http://www.omdbapi.com/?t=" + input + "&y=&plot=short&apikey=e8cc34df"
                 )
+                //Print our response data (using ALL the template literals)
                 .then(function (response) {
                     console.log(`Title: ${response.data.Title}
                     Release Year: ${response.data.Year}
@@ -104,29 +101,20 @@ const processCommand = function (command, input) {
                     Language: ${response.data.Language}
                     Plot: ${response.data.Plot}
                     Actors: ${response.data.Actors}`);
-                    fs.appendFile("./log.txt", `
-                    Title: ${response.data.Title}
-                    Release Year: ${response.data.Year}
-                    IMDB Rating: ${response.data.imdbRating}
-                    Rotten Tomatoes Rating: ${response.data.Ratings[1].Value}
-                    Country: ${response.data.Country}
-                    Language: ${response.data.Language}
-                    Plot: ${response.data.Plot}
-                    Actors: ${response.data.Actors}`,
-                        (err) => {
-                            if (err)
-                                console.log(`Could not log due to ${err.message}`);
-                        })
                 });
             break;
+    //if command is "do-what-it-says"
         case "do-what-it-says":
-            console.log("do-what-it-says");
-            fs.readFile("./random.txt", "utf8", function (err, data) {
-                if (err) console.log(err.message);
-                const newArr = data.split(",");
-                const command = newArr[0];
-                const input = newArr[1];
-                processCommand(command, input);
+            fs.readFile("random.txt", "utf8", function (err, data) {
+                if (err) throw err;
+                    var randomText = data.split(",");
+                
+                if (randomText.length == 2) {
+                    processCommand(randomText[0], randomText[1]);
+                }
+                else if (randomText.length == 1) {
+                    processCommand(randomText[0]);
+                }
             });
     }
 };
