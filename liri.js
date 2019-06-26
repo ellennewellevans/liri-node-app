@@ -1,56 +1,134 @@
+const Spotify = require("node-spotify-api");
 require("dotenv").config();
-var keys = require("./keys.js");
-var spotify = new Spotify(keys.spotify);
-var command = process.argv[2]
-var input = process.argv[3];
-var moment = require('moment');
-moment().format();
+const keys = require("./keys.js");
+const spotify = new Spotify(keys.spotify);
+const fs = require("fs");
+const axios = require("axios");
+const moment = require("moment");
 
-/* `node liri.js concert-this <artist/band name here>`
+const command = process.argv[2];
+const input = process.argv.slice(3).join("+");
 
-   * This will search the Bands in Town Artist Events API (`"https://rest.bandsintown.com/artists/" + artist + "/events?app_id=codingbootcamp"`) for an artist and render the following information about each event to the terminal:
-
-     * Name of the venue
-
-     * Venue location
-
-     * Date of the Event (use moment to format this as "MM/DD/YYYY")
-*/
-
-//    * `concert-this`
-function concertIt(bandQuery) {
-    var queryUrl = "https://rest.bandsintown.com/artists/" + bandQuery + "/events?app_id=codingbootcamp#";
-    console.log(queryUrl);
-    request(queryUrl, function(error, response, body) {
-        if (!error && response.statusCode === 200) {
-        var concertData = JSON.parse(body);
-        var momentDT = moment().format('L');
-        console.log("Venue Name : " + concertData[0].venue.name +
-                    "\nVenue Location: " + concertData[0].venue.city + 
-                    "," + concertData[0].venue.country + "\nDate of the Event: "
-                     + momentDT);
-            
-        };
-    });
-};
-
-var ask = function (commands, funData){
-    switch(commands) {
+const processCommand = function (command, input) {
+    switch (command) {
         case "concert-this":
-            concertIt(funData);
+            axios
+                .get(
+                    "https://rest.bandsintown.com/artists/" +
+                    input +
+                    "/events?app_id=codingbootcamp"
+                )
+                .then(function (response) {
+                    const eventArray = response.data;
+                    eventArray.forEach(function (response) {
+                        const formattedDate = moment(response.datetime).format(
+                            "MM/DD/YYYY"
+                        );
+                        console.log(`${response.venue.name}
+                        ${response.venue.city}, ${response.venue.region}
+                        ${formattedDate}
+                        ==============================================`);
+                        fs.appendFile("./log.txt",`${response.venue.name}
+                        ${response.venue.city}, 
+                        ${response.venue.region}
+                        ${formattedDate}
+                        ==============================================`,
+                            err => {
+                                if (err) console.log(`Could not log due to ${err.message}`);
+                            }
+                        );
+                    });
+                });
             break;
-        case "movie-this" :
-            movieIt(funData);
-            break;    
-        case 'spotify-this-song':
-            spotifyIt(funData); 
+        case "spotify-this-song":
+            if (input === "") {
+                input = "The Sign Ace of Base";
+            }
+            spotify.search({
+                    type: "track",
+                    query: `'${input}'`,
+                    limit: 1
+                },
+                function (err, data) {
+                    if (err) {
+                        return console.log("Error occurred: " + err);
+                    }
+                    console.log(`Artist: ${data.tracks.items[0].album.artists[0].name}
+                                Song: ${data.tracks.items[0].name}`);
+                                fs.appendFile("./log.txt",`
+                                Artist: ${data.tracks.items[0].album.artists[0].name}
+                                Song: ${data.tracks.items[0].name}`,
+                        err => {
+                            if (err) console.log(`Could not log due to ${err.message}`);
+                        }
+                    );
+                    const previewURL = data.tracks.items[0].preview_url;
+                    console.log(
+                        previewURL === null ?
+                        "Preview not available for this song" :
+                        `Preview: ${previewURL}`
+                    );
+                    fs.appendFile(
+                        "./log.txt",
+                        previewURL === null ?
+                        "\nPreview not available for this song" :
+                        `
+                    Preview: ${previewURL}`,
+                        err => {
+                            if (err) console.log(`Could not log due to ${err.message}`);
+                        }
+                    );
+                    console.log(`Album: ${data.tracks.items[0].album.name}`);
+                    fs.appendFile("./log.txt", `
+                Album: ${data.tracks.items[0].album.name}`,
+                        (err) => {
+                            if (err) console.log(`Could not log due to ${err.message}`);
+                        })
+                }
+            );
             break;
-        case 'do-what-it-says':
-            doWhatItSays(); 
+        case "movie-this":
+            if (input === "") {
+                input = "Mr Nobody";
+            }
+            axios
+                .get(
+                    "http://www.omdbapi.com/?t=" + input + "&y=&plot=short&apikey=e8cc34df"
+                )
+                .then(function (response) {
+                    console.log(`Title: ${response.data.Title}
+                    Release Year: ${response.data.Year}
+                    IMDB Rating: ${response.data.imdbRating}
+                    Rotten Tomatoes Rating: ${response.data.Ratings[1].Value}
+                    Country: ${response.data.Country}
+                    Language: ${response.data.Language}
+                    Plot: ${response.data.Plot}
+                    Actors: ${response.data.Actors}`);
+                    fs.appendFile("./log.txt", `
+                    Title: ${response.data.Title}
+                    Release Year: ${response.data.Year}
+                    IMDB Rating: ${response.data.imdbRating}
+                    Rotten Tomatoes Rating: ${response.data.Ratings[1].Value}
+                    Country: ${response.data.Country}
+                    Language: ${response.data.Language}
+                    Plot: ${response.data.Plot}
+                    Actors: ${response.data.Actors}`,
+                        (err) => {
+                            if (err)
+                                console.log(`Could not log due to ${err.message}`);
+                        })
+                });
             break;
-        default:
-        console.log("Invalid command. Please try again");
+        case "do-what-it-says":
+            console.log("do-what-it-says");
+            fs.readFile("./random.txt", "utf8", function (err, data) {
+                if (err) console.log(err.message);
+                const newArr = data.split(",");
+                const command = newArr[0];
+                const input = newArr[1];
+                processCommand(command, input);
+            });
     }
 };
 
-ask (command, input);
+processCommand(command, input);
