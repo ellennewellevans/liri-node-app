@@ -107,11 +107,13 @@ const processCommand = function (command, input) {
         case "do-what-it-says":
             fs.readFile("random.txt", "utf8", function (err, data) {
                 if (err) throw err;
-                
+                // process the text in the file, comma seperated
                 var randomText = data.split(",");
+                // if it's a file with command, input
                 if (randomText.length == 2) {
                     processCommand(randomText[0], randomText[1]);
                 }
+                // if it's a file with command only ("like do-what-it-says")
                 else if (randomText.length == 1) {
                     processCommand(randomText[0]);
                 }
